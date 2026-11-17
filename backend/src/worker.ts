@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import { pool } from "./db";
 import { redisConnection } from "./queue";
 import { extractPages, chunkText } from "./lib/ingest";
+import { embedTexts, toVectorLiteral } from "./lib/embeddings";
 
 export const ingestWorker = new Worker(
   "ingest",
@@ -18,12 +19,21 @@ export const ingestWorker = new Worker(
 
       await pool.query("delete from chunks where document_id = $1", [documentId]);
 
-      let index = 0;
+      const items: { page: number; content: string }[] = [];
       for (let p = 0; p < pages.length; p++) {
         for (const content of chunkText(pages[p])) {
+          items.push({ page: p + 1, content });
+        }
+      }
+      
+      const BATCH = 16;
+      for (let i = 0; i < items.length; i += BATCH) {
+        const batch = items.slice(i, i + BATCH);
+        const vectors = await embedTexts(batch.map((b) => b.content));
+        for (let j = 0; j < batch.length; j++) {
           await pool.query(
-            "insert into chunks (document_id, page_number, chunk_index, content) values ($1, $2, $3, $4)",
-            [documentId, p + 1, index++, content]
+            "insert into chunks (document_id, page_number, chunk_index, content, embedding) values ($1, $2, $3, $4, $5::vector)",
+            [documentId, batch[j].page, i + j, batch[j].content, toVectorLiteral(vectors[j])]
           );
         }
       }
