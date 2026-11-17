@@ -3,6 +3,9 @@ import express from "express";
 import { pool } from "./db";
 import { authRouter } from "./routes/auth";
 import { requireAuth } from "./middleware/auth";
+import { Request, Response, NextFunction } from "express";
+import { documentsRouter } from "./routes/documents";
+import "./worker";
 
 const app = express();
 app.use(express.json());
@@ -19,6 +22,7 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/documents", documentsRouter);
 
 app.get("/me", requireAuth, async (_req, res) => {
   const { rows } = await pool.query(
@@ -26,6 +30,10 @@ app.get("/me", requireAuth, async (_req, res) => {
     [res.locals.userId]
   );
   res.json(rows[0]);
+});
+
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  res.status(400).json({ error: err.message });
 });
 
 const port = Number(process.env.PORT) || 3001;

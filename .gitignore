@@ -159,3 +159,6 @@ vite.config.ts.timestamp-*
 node_modules/
 .env
 uploads/
+
+*.pdf
+!docs/sample.pdf
