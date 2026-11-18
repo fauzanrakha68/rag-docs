@@ -6,6 +6,7 @@ import { requireAuth } from "./middleware/auth";
 import { Request, Response, NextFunction } from "express";
 import { documentsRouter } from "./routes/documents";
 import "./worker";
+import { chatRouter } from "./routes/chat";
 
 const app = express();
 app.use(express.json());
@@ -23,6 +24,7 @@ app.get("/health", async (_req, res) => {
 
 app.use("/auth", authRouter);
 app.use("/documents", documentsRouter);
+app.use("/documents", chatRouter);
 
 app.get("/me", requireAuth, async (_req, res) => {
   const { rows } = await pool.query(
