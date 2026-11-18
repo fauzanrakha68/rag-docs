@@ -7,8 +7,12 @@ import { Request, Response, NextFunction } from "express";
 import { documentsRouter } from "./routes/documents";
 import "./worker";
 import { chatRouter } from "./routes/chat";
+import cors from "cors";
 
 const app = express();
+
+app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:3000" }));
+
 app.use(express.json());
 
 app.get("/health", async (_req, res) => {
