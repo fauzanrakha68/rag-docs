@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AlertCircle, CheckCircle2, FileText, Loader2, LogOut, Upload } from "lucide-react";
 import { api, ApiError, clearToken, getToken } from "@/lib/api";
 
@@ -103,7 +104,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-4 py-8">
+<main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8">
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-900">Dokumen saya</h1>
         <div className="flex items-center gap-2">
@@ -143,21 +144,23 @@ export default function DocumentsPage() {
 
       <ul className="space-y-3">
         {docs?.map((d) => (
-          <li
-            key={d.id}
-            className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4"
-          >
-            <div className="flex items-center gap-3">
-              <FileText className="text-neutral-400" size={20} />
-              <div>
-                <p className="font-medium text-neutral-900">{d.title}</p>
-                <p className="text-sm text-neutral-500">
-                  {d.page_count ? `${d.page_count} halaman · ` : ""}
-                  {new Date(d.created_at).toLocaleDateString("id-ID")}
-                </p>
+          <li key={d.id}>
+            <Link
+              href={`/documents/${d.id}`}
+              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 hover:border-indigo-300"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="text-neutral-400" size={20} />
+                <div>
+                  <p className="font-medium text-neutral-900">{d.title}</p>
+                  <p className="text-sm text-neutral-500">
+                    {d.page_count ? `${d.page_count} halaman · ` : ""}
+                    {new Date(d.created_at).toLocaleDateString("id-ID")}
+                  </p>
+                </div>
               </div>
-            </div>
-            <StatusBadge status={d.status} />
+              <StatusBadge status={d.status} />
+            </Link>
           </li>
         ))}
       </ul>
