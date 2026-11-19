@@ -14,7 +14,8 @@ export async function chat(messages: ChatMessage[]): Promise<string> {
       model: MODEL,
       messages,
       stream: false,
-      options: { temperature: 0.2 },
+      keep_alive: "30m",
+      options: { temperature: 0.2, num_predict: 400 },
     }),
   });
   if (!res.ok) {

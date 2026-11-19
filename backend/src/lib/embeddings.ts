@@ -5,7 +5,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   const res = await fetch(`${OLLAMA_URL}/api/embed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, input: texts }),
+    body: JSON.stringify({ model: MODEL, input: texts, keep_alive: "30m" }),
   });
   if (!res.ok) {
     throw new Error(`Embedding gagal (${res.status}): ${await res.text()}`);

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Bot, Loader2, Send } from "lucide-react";
+import { ArrowLeft, Bot, Loader2, MessageSquarePlus, Send } from "lucide-react";
 import { api, ApiError, clearToken, getToken } from "@/lib/api";
 
 type Source = { n: number; page: number; snippet: string; score: number };
@@ -18,6 +18,11 @@ type Message =
   | { role: "user"; text: string }
   | { role: "assistant"; text: string; sources: Source[] }
   | { role: "error"; text: string };
+
+type HistoryResponse = {
+  conversationId: string | null;
+  messages: { role: "user" | "assistant"; text: string; sources: Source[] }[];
+};
 
 function AssistantMessage({ text, sources }: { text: string; sources: Source[] }) {
   const [open, setOpen] = useState<number | null>(null);
@@ -109,6 +114,27 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, asking]);
 
+  useEffect(() => {
+    if (!getToken()) return;
+    api<HistoryResponse>(`/documents/${id}/history`)
+      .then((h) => {
+        setConversationId(h.conversationId ?? undefined);
+        setMessages(
+          h.messages.map(
+            (m): Message =>
+              m.role === "user"
+                ? { role: "user", text: m.text }
+                : { role: "assistant", text: m.text, sources: m.sources }
+          )
+        );
+      })
+      .catch(() => {});
+  }, [id]);
+
+  function newChat() {
+    setMessages([]);
+    setConversationId(undefined);
+  }
   const ready = doc?.status === "ready";
 
   async function handleSubmit(e: { preventDefault: () => void }) {
@@ -151,6 +177,15 @@ export default function ChatPage() {
             <p className="text-sm text-neutral-500">{doc.page_count} halaman</p>
           ) : null}
         </div>
+        {messages.length > 0 && (
+          <button
+            type="button"
+            onClick={newChat}
+            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+          >
+            <MessageSquarePlus size={16} /> Percakapan baru
+          </button>
+        )}
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto py-4">
