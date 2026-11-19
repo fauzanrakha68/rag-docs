@@ -236,7 +236,8 @@ function ChatContent() {
               </p>
             );
           }
-          return <AssistantMessage key={i} text={m.text} sources={m.sources} />;
+          const refused = m.text.startsWith("Saya tidak menemukan informasi");
+          return <AssistantMessage key={i} text={m.text} sources={refused ? [] : m.sources} />;
         })}
 
         {asking && messages[messages.length - 1]?.role === "user" && (
