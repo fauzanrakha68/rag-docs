@@ -6,6 +6,7 @@ import { z } from "zod";
 import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { ingestQueue } from "../queue";
+import { deleteDocument, renameDocument } from "../lib/documents";
 
 export const documentsRouter = Router();
 
@@ -57,4 +58,26 @@ documentsRouter.get("/:id", requireAuth, async (req, res) => {
   );
   if (!rows[0]) return res.status(404).json({ error: "Dokumen tidak ditemukan" });
   res.json(rows[0]);
+});
+
+const renameSchema = z.object({ title: z.string().trim().min(1).max(200) });
+
+documentsRouter.patch("/:id", requireAuth, async (req, res) => {
+  const id = z.string().uuid().safeParse(req.params.id);
+  const body = renameSchema.safeParse(req.body);
+  if (!id.success || !body.success) {
+    return res.status(400).json({ error: "Judul harus diisi (maksimal 200 karakter)" });
+  }
+  const doc = await renameDocument(res.locals.userId, id.data, body.data.title);
+  if (!doc) return res.status(404).json({ error: "Dokumen tidak ditemukan" });
+  res.json(doc);
+});
+
+documentsRouter.delete("/:id", requireAuth, async (req, res) => {
+  const id = z.string().uuid().safeParse(req.params.id);
+  if (!id.success) return res.status(400).json({ error: "ID tidak valid" });
+  const filePath = await deleteDocument(res.locals.userId, id.data);
+  if (!filePath) return res.status(404).json({ error: "Dokumen tidak ditemukan" });
+  await fs.promises.unlink(filePath).catch(() => {});
+  res.status(204).end();
 });

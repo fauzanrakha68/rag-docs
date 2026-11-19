@@ -3,7 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertCircle, CheckCircle2, FileText, Loader2, LogOut, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Check,
+  FileText,
+  Loader2,
+  LogOut,
+  Pencil,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { api, ApiError, clearToken, getToken } from "@/lib/api";
 
 type Doc = {
@@ -42,6 +53,10 @@ export default function DocumentsPage() {
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const loadDocs = useCallback(async () => {
     try {
@@ -99,6 +114,36 @@ export default function DocumentsPage() {
     }
   }
 
+  async function saveTitle(id: string) {
+    const title = draftTitle.trim();
+    if (!title) return;
+    setBusyId(id);
+    setError("");
+    try {
+      await api(`/documents/${id}`, { method: "PATCH", body: JSON.stringify({ title }) });
+      setDocs((list) => list?.map((d) => (d.id === id ? { ...d, title } : d)) ?? null);
+      setEditingId(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function removeDoc(id: string) {
+    setBusyId(id);
+    setError("");
+    try {
+      await api(`/documents/${id}`, { method: "DELETE" });
+      setDocs((list) => list?.filter((d) => d.id !== id) ?? null);
+      setConfirmId(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function logout() {
     clearToken();
     router.replace("/login");
@@ -145,23 +190,105 @@ export default function DocumentsPage() {
 
       <ul className="space-y-3">
         {docs?.map((d) => (
-          <li key={d.id}>
-            <Link
-              href={`/documents/${d.id}`}
-              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 hover:border-indigo-300"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="text-neutral-400" size={20} />
-                <div>
-                  <p className="font-medium text-neutral-900">{d.title}</p>
-                  <p className="text-sm text-neutral-500">
-                    {d.page_count ? `${d.page_count} halaman · ` : ""}
-                    {new Date(d.created_at).toLocaleDateString("id-ID")}
-                  </p>
-                </div>
-              </div>
-              <StatusBadge status={d.status} />
-            </Link>
+          <li
+            key={d.id}
+            className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-4 hover:border-indigo-300"
+          >
+            {editingId === d.id ? (
+              <form
+                className="flex flex-1 items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  saveTitle(d.id);
+                }}
+              >
+                <FileText className="shrink-0 text-neutral-400" size={20} />
+                <input
+                  autoFocus
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  maxLength={200}
+                  aria-label="Judul dokumen"
+                  className="flex-1 rounded-lg border border-neutral-300 px-3 py-1.5 text-neutral-900 outline-none focus:border-indigo-500"
+                />
+                <button
+                  type="submit"
+                  disabled={busyId === d.id || !draftTitle.trim()}
+                  aria-label="Simpan judul"
+                  className="rounded-lg bg-indigo-600 p-2 text-white hover:bg-indigo-700 disabled:opacity-60"
+                >
+                  {busyId === d.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  aria-label="Batal"
+                  className="rounded-lg border border-neutral-300 p-2 text-neutral-700 hover:bg-neutral-100"
+                >
+                  <X size={16} />
+                </button>
+              </form>
+            ) : (
+              <>
+                <Link href={`/documents/${d.id}`} className="flex flex-1 items-center gap-3">
+                  <FileText className="shrink-0 text-neutral-400" size={20} />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-neutral-900">{d.title}</p>
+                    <p className="text-sm text-neutral-500">
+                      {d.page_count ? `${d.page_count} halaman · ` : ""}
+                      {new Date(d.created_at).toLocaleDateString("id-ID")}
+                    </p>
+                  </div>
+                </Link>
+                {confirmId === d.id ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-700">Hapus dokumen ini?</span>
+                    <button
+                      type="button"
+                      onClick={() => removeDoc(d.id)}
+                      disabled={busyId === d.id}
+                      className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                    >
+                      {busyId === d.id && <Loader2 size={14} className="animate-spin" />} Hapus
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmId(null)}
+                      className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <StatusBadge status={d.status} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(d.id);
+                        setDraftTitle(d.title);
+                        setConfirmId(null);
+                      }}
+                      aria-label="Ganti nama dokumen"
+                      className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmId(d.id);
+                        setEditingId(null);
+                      }}
+                      aria-label="Hapus dokumen"
+                      className="rounded-lg p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </li>
         ))}
       </ul>
