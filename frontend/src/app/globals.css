@@ -1,7 +1,28 @@
 @import "tailwindcss";
 
-:root {
-  --background: #fafafa;
-  --foreground: #171717;
+@theme {
+  --color-paper: #f6f7f9;
+  --color-ink: #14213d;
+  --color-ink-hover: #0c1630;
+  --color-muted: #5b6577;
+  --color-line: #d9dde5;
+  --color-highlight: #ffe45c;
+  --color-highlight-deep: #ffd814;
+  --color-danger: #b3261e;
+  --font-display: var(--font-bricolage), var(--font-geist-sans), sans-serif;
 }
 
+:root {
+  --background: #f6f7f9;
+  --foreground: #14213d;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}

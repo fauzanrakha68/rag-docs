@@ -35,7 +35,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-2">
-          <FileText className="text-indigo-600" size={24} />
+          <FileText className="text-ink" size={24} />
           <h1 className="text-lg font-semibold text-neutral-900">RAG Docs</h1>
         </div>
         <h2 className="mb-4 text-xl font-semibold text-neutral-900">
@@ -53,7 +53,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 outline-none focus:border-indigo-500"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 outline-none focus:border-ink"
             />
           </div>
           <div>
@@ -67,7 +67,7 @@ export default function LoginPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 outline-none focus:border-indigo-500"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 outline-none focus:border-ink"
             />
           </div>
 
@@ -76,7 +76,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2 font-medium text-white hover:bg-ink-hover disabled:opacity-60"
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
             {mode === "login" ? "Masuk" : "Daftar"}
@@ -89,7 +89,7 @@ export default function LoginPage() {
             setMode(mode === "login" ? "register" : "login");
             setError("");
           }}
-          className="mt-4 text-sm text-indigo-600 hover:underline"
+          className="mt-4 text-sm text-ink hover:underline"
         >
           {mode === "login" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}
         </button>

@@ -37,7 +37,7 @@ function AssistantMessage({ text, sources }: { text: string; sources: Source[] }
         key={i}
         type="button"
         onClick={() => setOpen(open === n ? null : n)}
-        className="mx-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded bg-indigo-100 px-1 text-xs font-medium text-indigo-700 hover:bg-indigo-200"
+        className="mx-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded bg-highlight px-1 text-xs font-medium text-ink hover:bg-highlight-deep"
       >
         {n}
       </button>
@@ -46,7 +46,7 @@ function AssistantMessage({ text, sources }: { text: string; sources: Source[] }
 
   return (
     <div className="flex gap-3">
-      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
+      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-highlight text-ink">
         <Bot size={18} />
       </div>
       <div className="max-w-[85%] space-y-2">
@@ -62,8 +62,8 @@ function AssistantMessage({ text, sources }: { text: string; sources: Source[] }
                 onClick={() => setOpen(open === s.n ? null : s.n)}
                 className={`rounded-full border px-3 py-1 text-xs ${
                   open === s.n
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-neutral-300 bg-white text-neutral-700 hover:border-indigo-300"
+                    ? "border-ink bg-ink text-white"
+                    : "border-neutral-300 bg-white text-neutral-700 hover:border-ink"
                 }`}
               >
                 Sumber {s.n} · hal. {s.page}
@@ -72,8 +72,8 @@ function AssistantMessage({ text, sources }: { text: string; sources: Source[] }
           </div>
         )}
         {active && (
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-neutral-700">
-            <p className="mb-1 font-medium text-indigo-800">Halaman {active.page}</p>
+          <div className="rounded-lg border border-highlight-deep bg-highlight/30 p-3 text-sm text-neutral-700">
+            <p className="mb-1 font-medium text-ink">Halaman {active.page}</p>
             <p>{active.snippet}</p>
           </div>
         )}
@@ -223,7 +223,7 @@ function ChatContent() {
           if (m.role === "user") {
             return (
               <div key={i} className="flex justify-end">
-                <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-indigo-600 px-4 py-3 text-white">
+                <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-ink px-4 py-3 text-white">
                   {m.text}
                 </div>
               </div>
@@ -254,12 +254,12 @@ function ChatContent() {
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Tulis pertanyaan tentang dokumen ini..."
           disabled={!ready || asking}
-          className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-indigo-500 disabled:bg-neutral-100"
+          className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-ink disabled:bg-neutral-100"
         />
         <button
           type="submit"
           disabled={!ready || asking || question.trim().length < 3}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink-hover disabled:opacity-60"
         >
           <Send size={16} /> Kirim
         </button>
