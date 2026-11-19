@@ -61,6 +61,7 @@ export default function DocumentsPage() {
       router.replace("/login");
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch awal, setState terjadi setelah await
     loadDocs();
   }, [router, loadDocs]);
 
