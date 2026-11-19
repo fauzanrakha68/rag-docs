@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Bot, Loader2, MessageSquarePlus, Send } from "lucide-react";
-import { api, ApiError, clearToken, getToken } from "@/lib/api";
+import { api, ApiError, clearToken, getToken, streamPost } from "@/lib/api";
 
 type Source = { n: number; page: number; snippet: string; score: number };
-type AskResponse = { conversationId: string; answer: string; sources: Source[] };
 type DocInfo = {
   id: string;
   title: string;
@@ -83,7 +82,7 @@ function AssistantMessage({ text, sources }: { text: string; sources: Source[] }
   );
 }
 
-export default function ChatPage() {
+function ChatContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [doc, setDoc] = useState<DocInfo | null>(null);
@@ -111,7 +110,7 @@ export default function ChatPage() {
   }, [id, router]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages, asking]);
 
   useEffect(() => {
@@ -135,6 +134,7 @@ export default function ChatPage() {
     setMessages([]);
     setConversationId(undefined);
   }
+
   const ready = doc?.status === "ready";
 
   async function handleSubmit(e: { preventDefault: () => void }) {
@@ -144,16 +144,37 @@ export default function ChatPage() {
     setQuestion("");
     setMessages((m) => [...m, { role: "user", text: q }]);
     setAsking(true);
+
+    let sources: Source[] = [];
+    let started = false;
+
     try {
-      const res = await api<AskResponse>(`/documents/${id}/ask`, {
-        method: "POST",
-        body: JSON.stringify({ question: q, conversationId }),
-      });
-      setConversationId(res.conversationId);
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", text: res.answer, sources: res.sources },
-      ]);
+      await streamPost(
+        `/documents/${id}/ask-stream`,
+        { question: q, conversationId },
+        (event, data) => {
+          if (event === "meta") {
+            const d = data as { conversationId: string; sources: Source[] };
+            sources = d.sources;
+            setConversationId(d.conversationId);
+          } else if (event === "token") {
+            const { text } = data as { text: string };
+            if (!started) {
+              started = true;
+              setMessages((m) => [...m, { role: "assistant", text, sources }]);
+            } else {
+              setMessages((m) => {
+                const last = m[m.length - 1];
+                if (!last || last.role !== "assistant") return m;
+                return [...m.slice(0, -1), { ...last, text: last.text + text }];
+              });
+            }
+          } else if (event === "error") {
+            const { message } = data as { message: string };
+            setMessages((m) => [...m, { role: "error", text: message }]);
+          }
+        }
+      );
     } catch (err) {
       setMessages((m) => [...m, { role: "error", text: (err as Error).message }]);
     } finally {
@@ -218,7 +239,7 @@ export default function ChatPage() {
           return <AssistantMessage key={i} text={m.text} sources={m.sources} />;
         })}
 
-        {asking && (
+        {asking && messages[messages.length - 1]?.role === "user" && (
           <p className="flex items-center gap-2 text-sm text-neutral-500">
             <Loader2 size={16} className="animate-spin" /> Mencari jawaban di dokumen...
           </p>
@@ -243,5 +264,13 @@ export default function ChatPage() {
         </button>
       </form>
     </main>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<p className="p-8 text-neutral-500">Memuat...</p>}>
+      <ChatContent />
+    </Suspense>
   );
 }

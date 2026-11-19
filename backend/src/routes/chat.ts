@@ -3,7 +3,7 @@ import { z } from "zod";
 import { pool } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { retrieve } from "../lib/retrieve";
-import { chat } from "../lib/llm";
+import { chat, chatStream } from "../lib/llm";
 
 export const chatRouter = Router();
 
@@ -125,6 +125,107 @@ chatRouter.post("/:id/ask", requireAuth, async (req, res) => {
     if (!conv.rows[0]) {
       return res.json({ conversationId: null, messages: [] });
     }
+
+    chatRouter.post("/:id/ask-stream", requireAuth, async (req, res) => {
+      const docId = z.string().uuid().safeParse(req.params.id);
+      const parsed = bodySchema.safeParse(req.body);
+      if (!docId.success || !parsed.success) {
+        return res.status(400).json({ error: "Input tidak valid" });
+      }
+      const userId = res.locals.userId as string;
+      const { question } = parsed.data;
+    
+      const doc = await pool.query(
+        "select status from documents where id = $1 and user_id = $2",
+        [docId.data, userId]
+      );
+      if (!doc.rows[0]) {
+        return res.status(404).json({ error: "Dokumen tidak ditemukan" });
+      }
+      if (doc.rows[0].status !== "ready") {
+        return res.status(409).json({ error: "Dokumen belum selesai diproses" });
+      }
+    
+      let conversationId = parsed.data.conversationId;
+      if (conversationId) {
+        const own = await pool.query(
+          "select 1 from conversations where id = $1 and user_id = $2 and document_id = $3",
+          [conversationId, userId, docId.data]
+        );
+        if (!own.rows[0]) {
+          return res.status(404).json({ error: "Percakapan tidak ditemukan" });
+        }
+      } else {
+        const created = await pool.query(
+          "insert into conversations (user_id, document_id) values ($1, $2) returning id",
+          [userId, docId.data]
+        );
+        conversationId = created.rows[0].id as string;
+      }
+    
+      await pool.query(
+        "insert into messages (conversation_id, role, content) values ($1, 'user', $2)",
+        [conversationId, question]
+      );
+    
+      res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+    
+      const send = (event: string, data: unknown) => {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      };
+    
+      try {
+        const found = await retrieve(docId.data, userId, question, 3);
+        const relevant = found.filter((s) => s.score >= MIN_SCORE);
+        const sources = relevant.map((s, i) => ({
+          n: i + 1,
+          page: s.page,
+          snippet: s.content.slice(0, 200),
+          score: Number(s.score.toFixed(3)),
+        }));
+        send("meta", { conversationId, sources });
+    
+        let answer = "";
+        if (relevant.length === 0) {
+          answer = NOT_FOUND_ANSWER;
+          send("token", { text: answer });
+        } else {
+          const context = relevant
+            .map((s, i) => `[${i + 1}] (halaman ${s.page})\n${s.content}`)
+            .join("\n\n");
+          for await (const piece of chatStream([
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: `Kutipan dokumen:\n${context}\n\nPertanyaan: ${question}` },
+          ])) {
+            answer += piece;
+            send("token", { text: piece });
+          }
+        }
+    
+        if (!answer.trim()) {
+          throw new Error("Model tidak menghasilkan jawaban");
+        }
+    
+        const saved = await pool.query(
+          "insert into messages (conversation_id, role, content) values ($1, 'assistant', $2) returning id",
+          [conversationId, answer]
+        );
+        for (const s of relevant) {
+          await pool.query(
+            "insert into message_sources (message_id, chunk_id, score) values ($1, $2, $3)",
+            [saved.rows[0].id, s.chunkId, s.score]
+          );
+        }
+        send("done", {});
+      } catch (err) {
+        send("error", { message: (err as Error).message });
+      } finally {
+        res.end();
+      }
+    });
   
     const { rows } = await pool.query(
       `select m.id, m.role, m.content,
