@@ -49,7 +49,9 @@ Prasyarat: Node.js 22, Docker, Ollama.
 
 1. Jalankan database dan Redis: `docker compose up -d`
 2. Buat tabel: jalankan isi `backend/sql/001_init.sql` lalu `backend/sql/002_embedding_1024.sql` pada database `ragdocs`
-   (contoh: `docker compose exec -T db psql -U raguser -d ragdocs < backend/sql/001_init.sql`)
+   - Linux/macOS: `docker compose exec -T db psql -U raguser -d ragdocs < backend/sql/001_init.sql`
+   - PowerShell: `Get-Content backend/sql/001_init.sql | docker compose exec -T db psql -U raguser -d ragdocs`
+   - Ulangi perintah yang sama untuk `backend/sql/002_embedding_1024.sql`
 3. Tarik model: `ollama pull bge-m3` dan `ollama pull qwen2.5:3b`
 4. Salin `backend/.env.example` menjadi `backend/.env`, lalu ganti `JWT_SECRET`
 5. Backend: `cd backend && npm install && npm run dev` (port 3001)
